@@ -1,0 +1,41 @@
+name: PythonLint
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+jobs:
+  pyLint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Init
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: 3.9
+      - name: Install mandatory dependencies
+        run: pip install autopep8 autoflake isort black
+      - name: "[autopep8] Format fix"
+        run: |
+          find -name "*.py" -not -path "./venv/*" -exec autopep8 --verbose --in-place --recursive --aggressive --aggressive '{}' \;
+      - name: "[autoflake] Remove unused imports and variables"
+        run: |
+          find . -regex "^.*\.py$" -exec autoflake --in-place --recursive --remove-all-unused-imports --remove-unused-variables --ignore-init-module-imports -v -v '{}' \;
+      - name: "[black] lint"
+        run: |
+          black -v .
+      - name: "[isort] lint"
+        run: |
+          isort -v --cs --ca --ls --lss --ds --fss --lai 2 -m 4 .
+      - name: "PyLint Fixes"
+        run: |
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git commit -m "[AUTO]: format / refactor" -a
+      - name: Push changes
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
